@@ -8,14 +8,14 @@ import android.view.View;
  * </p>
  * 
  * <p>
- * Callbacks for events on Phantom widgets
+ * Callbacks for events on ControlInputs.
  * </p>
  * 
  * @author George Xian
  * @since 2015-03-22
  *
  */
-public interface PWidgetListener {
+public interface ControlInputListener {
 	
 	/**
 	 * Called when a sub-channel value of a Phantom widget changes.
