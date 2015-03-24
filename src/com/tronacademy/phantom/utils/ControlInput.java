@@ -40,7 +40,7 @@ public interface ControlInput {
 	/**
 	 * Attach listener to control input.
 	 * 
-	 * @param listener   Listener with user overridden callbacks to use.
+	 * @param listener   User defined event callbacks for this instance.
 	 */
 	public void setControlInputListener(ControlInputListener listener);
 	
@@ -50,5 +50,10 @@ public interface ControlInput {
 	 * @param touchable  Set true to enable touch or false to disable
 	 */
 	public void setTouchable(boolean touchable);
+	
+	/**
+	 * Opens an interface to change settings of this ControlInput instance.
+	 */
+	public void configure();
 
 }
