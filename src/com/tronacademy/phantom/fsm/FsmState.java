@@ -167,7 +167,7 @@ public abstract class FsmState {
 	 * 
 	 * @param context  Information for the state action.
 	 */
-	public <T> void performAction(T context) {
+	public void performAction(Object... context) {
 		// perform action of child state if it exists
 		if (hasInnerState()) {
 			mCurrentState.performAction(context);
