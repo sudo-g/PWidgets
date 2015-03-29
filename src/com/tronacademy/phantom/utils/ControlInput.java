@@ -38,7 +38,7 @@ public interface ControlInput {
 	public int getNumOfSubChans();
 	
 	/**
-	 * Attach listener to control input.
+	 * Attach custom hook to ControlInput events.
 	 * 
 	 * @param listener   User defined event callbacks for this instance.
 	 */
