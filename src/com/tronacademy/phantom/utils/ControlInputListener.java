@@ -54,7 +54,7 @@ public interface ControlInputListener {
 	 * 
 	 * @param view       The widget instance broadcasting this event.
 	 */
-	public void onTrackerDodgeBoundary(View view);
+	public void onTrackerLeaveBoundary(View view);
 	
 	/**
 	 * Called upon a sub-channel value reaching its control limit value.
@@ -70,6 +70,6 @@ public interface ControlInputListener {
 	 * @param view       The widget instance broadcasting this event.
 	 * @param subchannel The sub-channel whose's value
 	 */
-	public void onSubChanDodgeLimit(View view, int subchannel);
+	public void onSubChanLeaveLimit(View view, int subchannel);
 
 }
