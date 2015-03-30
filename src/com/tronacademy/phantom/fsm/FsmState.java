@@ -1,5 +1,7 @@
 package com.tronacademy.phantom.fsm;
 
+import java.util.concurrent.Semaphore;
+
 /**
  * <p>
  * Framework for a finite state machine (FSM) with nesting functionality.
@@ -28,7 +30,7 @@ package com.tronacademy.phantom.fsm;
  * Ensure that the return value of the {@code super} method is still 
  * returned so transition can still occur. A transition hook is 
  * selectively executing actions based on incoming event or the state 
- * being transitioned using this method.
+ * being transitioned on the overridden method.
  * </p>
  * 
  * <p>
@@ -49,7 +51,9 @@ public abstract class FsmState {
 	private FsmState[] mTransitionStates;
 	private FsmState mEntrySubstate = null;
 	
-	private FsmState mCurrentState;
+	private FsmState mCurrentState = null;
+	
+	private Semaphore mEntrySubstateAccessLock = new Semaphore(1);
 	
 	private final String evIdErrMsg = "Invalid event ID, '%s' allows event IDs within [0, %d), [%s] had ID %d";
 	private final String evSpaceErrMsg = "Wrong event space, '%s' operates in event space ID %d, [%s] has event space ID %d";
@@ -72,10 +76,17 @@ public abstract class FsmState {
 	 * Sets the inner state that becomes active immediately upon entry of this state.
 	 * 
 	 * @param state   State select as entry point.
-	 * @throws IllegalArgumentException if state is the same event space as parent 
+	 * @throws IllegalArgumentException if state is the same event space as parent.
+	 * @throws InterruptedException if changing mEntrySubstate is attempted after it is set. 
 	 */
-	public synchronized void setEntrySubstate(final FsmState state) throws IllegalArgumentException {
+	public synchronized void setEntrySubstate(final FsmState state) throws 
+	IllegalArgumentException, InterruptedException {
 		if (state.getEvSpaceId() != mEvSpaceId) {
+			// prevents mEntrySubstate from changing once it is set
+			// so it is always safe to call methods of mCurrentState 
+			// after mEntrySubstate found to not be null
+			mEntrySubstateAccessLock.acquire(); 
+			
 			mEntrySubstate = state;
 			mCurrentState = mEntrySubstate;
 		} else {
@@ -94,7 +105,7 @@ public abstract class FsmState {
 	public synchronized void bindEventToTransition(final FsmState state, final FsmEvent event) throws 
 	IndexOutOfBoundsException, IllegalArgumentException {
 		if (event.getSpaceId() == mEvSpaceId) {
-			int evId = event.getId();
+			final int evId = event.getId();
 			if (evId >= 0 && evId < mTransitionStates.length) {
 	 			mTransitionStates[evId] = state;
 			} else {
@@ -189,19 +200,14 @@ public abstract class FsmState {
 	}
 	
 	/**
-	 * @return Current sub-state
+	 * @return Current sub-state or null if no internal state.
 	 */
 	protected FsmState getInnerCurrentState() {
 		return mCurrentState;
 	}
 	
-	private synchronized boolean hasInnerState() {
-		if (mCurrentState == null) {
-			// uninitialized internal state case
-			mCurrentState = mEntrySubstate;
-		}
-		
-		return (mCurrentState != null);
+	private boolean hasInnerState() {
+		return (mEntrySubstate != null);
 	}
 	
 	private void resetInternalState() {
@@ -214,4 +220,3 @@ public abstract class FsmState {
 		mCurrentState = mEntrySubstate;
 	}
 }
-
