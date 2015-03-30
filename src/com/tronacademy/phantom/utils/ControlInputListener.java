@@ -61,15 +61,17 @@ public interface ControlInputListener {
 	 * 
 	 * @param view       The widget instance broadcasting this event.
 	 * @param subchannel The sub-channel whose's value is at its limit.
+	 * @param dir        False for lower limit, true for upper limit.
 	 */
-	public void onSubChanHitLimit(View view, int subchannel);
+	public void onSubChanHitLimit(View view, int subchannel, boolean dir);
 	
 	/**
 	 * Called upon a sub-channel value moving away from its control limit value.
 	 * 
 	 * @param view       The widget instance broadcasting this event.
-	 * @param subchannel The sub-channel whose's value
+	 * @param subchannel The sub-channel whose's value.
+	 * @param dir        False for lower limit, true for upper limit.
 	 */
-	public void onSubChanLeaveLimit(View view, int subchannel);
+	public void onSubChanLeaveLimit(View view, int subchannel, boolean dir);
 
 }
