@@ -129,7 +129,7 @@ public abstract class FsmState {
 	 * @return State to transition to or null if no transition.
 	 * @throws IndexOutOfBoundsException is event ID is invalid
 	 */
-	public FsmState signalEvent(final FsmEvent event) throws IndexOutOfBoundsException {
+	public FsmState signalEvent(final FsmEvent event, Object... context) throws IndexOutOfBoundsException {
 		if (event == null) {
 			// no meaningful event occurred, so no transition
 			return null;
@@ -161,7 +161,7 @@ public abstract class FsmState {
 				
 				// signal event to sub-state if it exists
 				if (hasInnerState()) {
-					final FsmState newState = mCurrentState.signalEvent(event);
+					final FsmState newState = mCurrentState.signalEvent(event, context);
 					if (newState != null) {
 						mCurrentState = newState;
 					}
