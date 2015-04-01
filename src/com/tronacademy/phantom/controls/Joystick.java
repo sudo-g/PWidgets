@@ -82,7 +82,7 @@ public class Joystick extends View implements ControlInput {
 	@Override
 	public synchronized void setSubChanVal(int subchannel, byte value) throws 
 	UnsupportedOperationException{
-		String errStrTmplt = getContext().getResources().getString(R.string.operation_unavailable);
+		String errStrTmplt = getContext().getResources().getString(R.string.operation_invalid);
 		throw new UnsupportedOperationException(
 				String.format(errStrTmplt, "Manually setting sub-channel value"));
 	}
