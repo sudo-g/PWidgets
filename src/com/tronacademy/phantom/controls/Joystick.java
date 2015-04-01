@@ -44,9 +44,9 @@ public class Joystick extends View implements ControlInput {
 	
 	// graphics
 	protected Bitmap mJoystickBaseBmp;
-	protected Bitmap mJoystickTrackerBmp;
+	protected Bitmap mJoystickTrkrBmp;
 	protected Paint mJoystickBaseStyle = new Paint();
-	protected Paint mJoystickTrackerStyle = new Paint();
+	protected Paint mJoystickTrkrStyle = new Paint();
 	
 	// size and position for display in the View's reference frame
 	// this reference has (0, 0) at the top left of the view space allocation
@@ -111,7 +111,7 @@ public class Joystick extends View implements ControlInput {
 		mCenPosY = getHeight() / 2;
 		
 		// get size of the bitmap elements
-		mTrkrRad = mJoystickTrackerBmp.getHeight() / 2;	
+		mTrkrRad = mJoystickTrkrBmp.getHeight() / 2;	
 		mBaseRad = mJoystickBaseBmp.getHeight() / 2;
 		
 		// allocate room for the view and the overhang from the tracker off the base
@@ -139,18 +139,27 @@ public class Joystick extends View implements ControlInput {
 	protected void onDraw(Canvas canvas) {
 		// on first draw event, center the tracker graphic
 		if (!mInitialCentered) {
-			//TODO:
+			mTrkrPosX = mCenPosX;
+			mTrkrPosY = mCenPosY;
 			
 			mInitialCentered = true;
 		}
-	
-		// TODO:
+		
+		// stored co-ordinates is for centroid, draw co-ordinates from from top left
+		final float baseDrawX = (float) (mCenPosX - mBaseRad);
+		final float baseDrawY = (float) (mCenPosY - mBaseRad);
+		
+		final float trkrDrawX = (float) (mTrkrPosX - mTrkrRad);
+		final float trkrDrawY = (float) (mTrkrPosY - mTrkrRad);
+		
+		canvas.drawBitmap(mJoystickBaseBmp, baseDrawX, baseDrawY, mJoystickBaseStyle);
+		canvas.drawBitmap(mJoystickTrkrBmp, trkrDrawX, trkrDrawY, mJoystickTrkrStyle);
 	}
 	
 	protected void loadGraphics() {
 		Resources res = getContext().getResources();
 		mJoystickBaseBmp = (Bitmap) BitmapFactory.decodeResource(res, R.drawable.joystick_base);
-		mJoystickTrackerBmp = (Bitmap) BitmapFactory.decodeResource(res, R.drawable.joystick_tracker);
+		mJoystickTrkrBmp = (Bitmap) BitmapFactory.decodeResource(res, R.drawable.joystick_tracker);
 	}
 	
 	protected int getBaseRad() {
@@ -164,6 +173,8 @@ public class Joystick extends View implements ControlInput {
 	protected void releaseTracker() {
 		mTrkrPosX = mCenPosX;
 		mTrkrPosY = mCenPosY;
+		
+		invalidate();
 	}
 	
 	/* -- FSM helper functions -- */
@@ -171,8 +182,13 @@ public class Joystick extends View implements ControlInput {
 		// track the finger precisely
 		mTrkrPosX = (int) event.getX();
 		mTrkrPosY = (int) event.getY();
+		invalidate();
 		
-		//TODO: call onSubChanValChanged()
+		byte[] chanVal = toSubChanRefFrame(mTrkrPosX, mTrkrPosY);
+		if (mControlInputListener != null) {
+			mControlInputListener.onSubChanValChanged(getRootView(), 0, chanVal[0]);
+			mControlInputListener.onSubChanValChanged(getRootView(), 1, chanVal[1]);
+		}
 	}
 	
 	private void onBoundaryTrack(MotionEvent event) {
@@ -182,8 +198,10 @@ public class Joystick extends View implements ControlInput {
 		
 		// unit vector multiplied by the boundary radius
 		final int touchPolMag = (int) Math.sqrt(dx*dx + dy*dy);
-		mTrkrPosX = dx*(BASE_RAD_BOUNDARY_PERC*mBaseRad) / touchPolMag;
-		mTrkrPosY = dy*(BASE_RAD_BOUNDARY_PERC*mBaseRad) / touchPolMag;
+		mTrkrPosX = dx * getTravelRad()/touchPolMag + mCenPosX;
+		mTrkrPosY = dy * getTravelRad()/touchPolMag + mCenPosY;
+		
+		invalidate();
 	}
 	
 	private FsmEvent evaluateEvent(MotionEvent event) {
@@ -203,10 +221,7 @@ public class Joystick extends View implements ControlInput {
 				return EVENT_RELEASE;
 			}
 		} else if (action == MotionEvent.ACTION_MOVE) {
-			// actual region of base that serves as tracker boundary
-			final int usableRad = BASE_RAD_BOUNDARY_PERC*mBaseRad/100;
-			
-			if ((x*x + y*y) <= (usableRad*usableRad)) {
+			if ((x*x + y*y) <= (getTravelRad()*getTravelRad())) {
 				return EVENT_INBOUNDARY;
 			} else {
 				return EVENT_ONBOUNDARY;
@@ -226,8 +241,22 @@ public class Joystick extends View implements ControlInput {
 		return vect;
 	}
 	
+	private byte[] toSubChanRefFrame(int viewRefX, int viewRefY) {
+		int[] abstrRefFrameVect = toAbstractRefFrame(viewRefX, viewRefY);
+		byte subChanRefFrameX = (byte) (128 * abstrRefFrameVect[0] / getTravelRad());
+		byte subChanRefFrameY = (byte) (128 * abstrRefFrameVect[1] / getTravelRad());
+		
+		if (subChanRefFrameX >= 128) {
+			// asymmetry of byte [-128, 127]
+			subChanRefFrameX -= 1;
+		}
+		
+		byte[] subChanRefFrame = {subChanRefFrameX, subChanRefFrameY};
+		return subChanRefFrame;
+	}
+	
 	private int getTravelRad() {
-		return BASE_RAD_BOUNDARY_PERC*mBaseRad; 
+		return BASE_RAD_BOUNDARY_PERC*mBaseRad / 100; 
 	}
 	
 	/* -- FSM declarations -- */
@@ -273,6 +302,16 @@ public class Joystick extends View implements ControlInput {
 				super.performAction(context);
 				releaseTracker();
 			}
+			
+			public FsmState signalEvent(final FsmEvent event) {
+				FsmState newState = super.signalEvent(event);
+				
+				if (mControlInputListener != null && newState == mInBoundaryState) {
+					mControlInputListener.onStartTracking(getRootView());
+				}
+				
+				return newState;
+			}
 		}
 		
 		private class InBoundaryState extends FsmState {
@@ -288,20 +327,15 @@ public class Joystick extends View implements ControlInput {
 			public FsmState signalEvent(final FsmEvent event) {
 				FsmState newState = super.signalEvent(event);
 				
-				if (newState == mOnBoundaryState) {
-					mControlInputListener.onTrackerHitBoundary(getRootView());
-					
-					// evaluate whether a sub-channel also hit its limit
-					int[] abstrVect = toAbstractRefFrame(mTrkrPosX, mTrkrPosY);
-					for (int i=0; i<abstrVect.length; i++) {
-						if (abstrVect[0] > getTravelRad()) {
-							mControlInputListener.onSubChanHitLimit(getRootView(), i, true);
-						} else if (abstrVect[0] < (-getTravelRad())) {
-							mControlInputListener.onSubChanHitLimit(getRootView(), i, false);
-						}
+				if (mControlInputListener != null) {
+					if (newState == mOnBoundaryState) {
+						mControlInputListener.onTrackerHitBoundary(getRootView());
+						
+						// TODO: evaluate whether a sub-channel also hit its limit
+	
+					} else if (newState == mIdleState) {
+						mControlInputListener.onReleaseTracking(getRootView());
 					}
-				} else if (newState == mIdleState) {
-					mControlInputListener.onReleaseTracking(getRootView());
 				}
 				
 				return newState;
@@ -321,13 +355,7 @@ public class Joystick extends View implements ControlInput {
 			public FsmState signalEvent(final FsmEvent event) {
 				FsmState newState = super.signalEvent(event);
 				
-				if (newState != mOnBoundaryState) {
-					mControlInputListener.onTrackerLeaveBoundary(getRootView());
-					
-					//TODO: Evaluate whether sub-channel left its limit
-				}
-				
-				if (newState == mIdleState) {
+				if (mControlInputListener != null && newState == mIdleState) {
 					mControlInputListener.onReleaseTracking(getRootView());
 				}
 				

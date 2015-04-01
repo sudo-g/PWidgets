@@ -49,14 +49,6 @@ public interface ControlInputListener {
 	public void onTrackerHitBoundary(View view);
 	
 	/**
-	 * For trackable type widgets, called upon the tracker moving away 
-	 * from its allowed travel boundary.
-	 * 
-	 * @param view       The widget instance broadcasting this event.
-	 */
-	public void onTrackerLeaveBoundary(View view);
-	
-	/**
 	 * Called upon a sub-channel value reaching its control limit value.
 	 * 
 	 * @param view       The widget instance broadcasting this event.
@@ -64,14 +56,4 @@ public interface ControlInputListener {
 	 * @param dir        False for lower limit, true for upper limit.
 	 */
 	public void onSubChanHitLimit(View view, int subchannel, boolean dir);
-	
-	/**
-	 * Called upon a sub-channel value moving away from its control limit value.
-	 * 
-	 * @param view       The widget instance broadcasting this event.
-	 * @param subchannel The sub-channel whose's value.
-	 * @param dir        False for lower limit, true for upper limit.
-	 */
-	public void onSubChanLeaveLimit(View view, int subchannel, boolean dir);
-
 }
