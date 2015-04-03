@@ -38,6 +38,14 @@ public interface ControlInput {
 	public int getNumOfSubChans();
 	
 	/**
+	 * Gets the current value of the sub-channel requested
+	 * 
+	 * @param subchannel The sub-channel of interest.
+	 * @return The value of the sub-channel of interest.
+	 */
+	public byte getSubChanVal(int subchannel);
+	
+	/**
 	 * Attach custom hook to ControlInput events.
 	 * 
 	 * @param listener   User defined event callbacks for this instance.

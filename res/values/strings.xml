@@ -3,4 +3,5 @@
     <string name="app_name">PWidgets</string>
 
     <string name="operation_invalid" formatted="false">%s operation is invalid this control input</string>
+    <string name="no_subchannel" formatted="false">Invalid sub-channel request: %d, %s has %d subchannel(s)</string>
 </resources>

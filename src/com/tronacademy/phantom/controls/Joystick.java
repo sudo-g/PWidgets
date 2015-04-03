@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -27,6 +28,8 @@ import com.tronacademy.phantom.controls.R;
  */
 public class Joystick extends View implements ControlInput {
 	
+	private static final String TAG = "Phantom::Joystick";
+	
 	/* -- Static properties of this ControlInput type -- */
 	// Joysticks are 2D control inputs
 	private static final int NUM_OF_SUBCHANS = 2;
@@ -40,7 +43,9 @@ public class Joystick extends View implements ControlInput {
 	protected static final FsmEvent EVENT_ONBOUNDARY = new FsmEvent("InBoundary", EV_SPACE_ID, 3);
 	
 	/* -- Fields -- */
+	public String mName = "Joystick";
 	protected ControlInputListener mControlInputListener;
+	private boolean mEnabled = true;
 	
 	// graphics
 	protected Bitmap mJoystickBaseBmp;
@@ -84,12 +89,23 @@ public class Joystick extends View implements ControlInput {
 	UnsupportedOperationException{
 		String errStrTmplt = getContext().getResources().getString(R.string.operation_invalid);
 		throw new UnsupportedOperationException(
-				String.format(errStrTmplt, "Manually setting sub-channel value"));
+				String.format(errStrTmplt, "Currently, manually setting sub-channel value"));
 	}
 
 	@Override
 	public int getNumOfSubChans() {
 		return NUM_OF_SUBCHANS;
+	}
+	
+	@Override
+	public synchronized byte getSubChanVal(int subchannel) throws IndexOutOfBoundsException {
+		if (subchannel > 0 && subchannel <= NUM_OF_SUBCHANS) {
+			return toSubChanRefFrame(mTrkrPosX, mTrkrPosY)[subchannel];
+		} else {
+			String errMsg = getContext().getResources().getString(R.string.no_subchannel);
+			throw new IndexOutOfBoundsException(
+					String.format(errMsg, subchannel, "Joystick", NUM_OF_SUBCHANS));
+		}
 	}
 
 	@Override
@@ -99,7 +115,8 @@ public class Joystick extends View implements ControlInput {
 
 	@Override
 	public void setTouchable(boolean touchable) {
-		setClickable(touchable);
+		mEnabled = touchable;
+		indicateTouchable(touchable);
 	}
 	
 	@Override
@@ -127,7 +144,7 @@ public class Joystick extends View implements ControlInput {
 		final FsmEvent fsmEvent = evaluateEvent(event);
 		
 		// reject touch events if processing unless they are release
-		if (!mIsProcessing || fsmEvent == EVENT_RELEASE) {
+		if (mEnabled && (!mIsProcessing || fsmEvent == EVENT_RELEASE)) {
 			mIsProcessing = true;
 			
 			// update state machine
@@ -182,6 +199,23 @@ public class Joystick extends View implements ControlInput {
 		mJoystickTrkrBmp = (Bitmap) BitmapFactory.decodeResource(res, R.drawable.joystick_tracker);
 	}
 	
+	/**
+	 * Sets the appearance of the ControlInput based on its touchable state.
+	 * Override this method to implement custom skins.
+	 * 
+	 * @param touchable   Flag indicating whether input is set to touchable.    
+	 */
+	protected void indicateTouchable(boolean touchable) {
+		if (touchable) {
+			mJoystickBaseStyle.setAlpha(255);
+			mJoystickTrkrStyle.setAlpha(255);
+		} else {
+			mJoystickBaseStyle.setAlpha(100);
+			mJoystickTrkrStyle.setAlpha(100);
+		}
+		invalidate();
+	}
+	
 	protected int getBaseRad() {
 		return mBaseRad;
 	}
@@ -208,8 +242,8 @@ public class Joystick extends View implements ControlInput {
 		// track the finger precisely
 		mTrkrPosX = (int) event.getX();
 		mTrkrPosY = (int) event.getY();
-		invalidate();
 		
+		invalidate();
 		signalSubChanChange();
 	}
 	
@@ -224,7 +258,6 @@ public class Joystick extends View implements ControlInput {
 		mTrkrPosY = dy * getTravelRad()/touchPolMag + mCenPosY;
 		
 		invalidate();
-		
 		signalSubChanChange();
 	}
 	
@@ -273,40 +306,27 @@ public class Joystick extends View implements ControlInput {
 		}
 	}
 	
-	private void processSubChanHitLimit(MotionEvent event) {
-		// checks whether perpendicular channel is centered
-		// because the other channel may have the incorrect limit value 
-		// due to rounding errors in computations 
-		// shortcut acceptable as only performed on onBoundaryState 
-		if (event.getX() == mCenPosX) {
-			// channel 1 limit, 
-			// low value is upper limit because View reference frame's y axis is reversed
-			mControlInputListener.onSubChanHitLimit(getRootView(), 1, event.getY() < mCenPosY);
-		} else if (event.getY() == mCenPosY) {
-			// channel 0 limit
-			mControlInputListener.onSubChanHitLimit(getRootView(), 0, event.getX() > mCenPosX);
-		}	
-	}
-	
 	private int[] toAbstractRefFrame(int viewRefX, int viewRefY) {
 		// view's y axis has 0 at top, want 0 at bottom
-		int[] vect = {viewRefX - mCenPosX, viewRefY - mCenPosY};
+		int[] vect = {viewRefX - mCenPosX, mCenPosY - viewRefY};
 		return vect;
 	}
 	
 	private byte[] toSubChanRefFrame(int viewRefX, int viewRefY) {
-		// sub-channel reference frame same as abstract but scaled to fit -128-127
+		// sub-channel reference frame same as abstract but scaled to fit [-128, 127]
 		int[] abstrRefFrameVect = toAbstractRefFrame(viewRefX, viewRefY);
-		byte subChanRefFrameX = (byte) (128 * abstrRefFrameVect[0] / getTravelRad());
-		byte subChanRefFrameY = (byte) (128 * abstrRefFrameVect[1] / getTravelRad());
+		byte[] subChanRefFrameVect = new byte[NUM_OF_SUBCHANS]; 
 		
-		if (subChanRefFrameX >= 128) {
-			// asymmetry of byte [-128, 127]
-			subChanRefFrameX = 127;
+		for (int i=0; i<NUM_OF_SUBCHANS; i++) {
+			final int subRefFrameComp = 128 * abstrRefFrameVect[i] / getTravelRad();
+			if (subRefFrameComp >= 128) {
+				subChanRefFrameVect[i] = 127;
+			} else {
+				subChanRefFrameVect[i] = (byte) subRefFrameComp;
+			}	
 		}
-		
-		byte[] subChanRefFrame = {subChanRefFrameX, subChanRefFrameY};
-		return subChanRefFrame;
+	
+		return subChanRefFrameVect;
 	}
 	
 	private int getTravelRad() {
@@ -329,11 +349,9 @@ public class Joystick extends View implements ControlInput {
 			try {
 				setEntrySubstate(mIdleState);
 			} catch (IllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Log.e(TAG, "Event space ID invalid");
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Log.e(TAG, "Attempted to set entry sub-state more than once");
 			}
 			
 			// couple states
@@ -384,9 +402,6 @@ public class Joystick extends View implements ControlInput {
 				if (mControlInputListener != null) {
 					if (newState == mOnBoundaryState) {
 						mControlInputListener.onTrackerHitBoundary(getRootView());
-						
-						// evaluate whether any of the sub-channels hit their limits
-						processSubChanHitLimit((MotionEvent) context[0]);
 	
 					} else if (newState == mIdleState) {
 						mControlInputListener.onReleaseTracking(getRootView());
@@ -410,8 +425,14 @@ public class Joystick extends View implements ControlInput {
 			public FsmState signalEvent(final FsmEvent event, Object... context) {
 				FsmState newState = super.signalEvent(event);
 				
-				if (mControlInputListener != null && newState == mIdleState) {
-					mControlInputListener.onReleaseTracking(getRootView());
+				if (mControlInputListener != null) {
+					if (newState != null) {
+						mControlInputListener.onTrackerLeaveBoundary(getRootView());
+					}
+					
+					if (newState == mIdleState) {
+						mControlInputListener.onReleaseTracking(getRootView());
+					}
 				}
 				
 				return newState;
