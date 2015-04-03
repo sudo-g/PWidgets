@@ -18,41 +18,63 @@ import android.view.View;
 public interface ControlInputListener {
 	
 	/**
-	 * Called when a sub-channel value of a Phantom widget changes.
+	 * Called when a sub-channel value of a Phantom control input changes.
 	 * 
-	 * @param view       The widget instance broadcasting this event.         
+	 * @param view       The control input instance broadcasting this event.         
 	 * @param subchannel The sub-channel being changed.
 	 * @param value      The value the sub-channel is being changed to.
 	 */
 	public void onSubChanValChanged(View view, int subchannel, byte value);
 	
 	/**
-	 * For trackable type widgets, called when user starts holding the tracker.
+	 * For trackable type control inputs, called when user starts holding the tracker.
 	 * 
-	 * @param view       The widget instance broadcasting this event.
+	 * @param view       The control input instance broadcasting this event.
 	 */
 	public void onStartTracking(View view);
 	
 	/**
-	 * For trackable type widgets, called when user releases the tracker.
+	 * For trackable type control inputs, called when user releases the tracker.
 	 * 
-	 * @param view       The widget instance broadcasting this event.
+	 * @param view       The control input instance broadcasting this event.
 	 */
 	public void onReleaseTracking(View view);
 	
 	/**
-	 * For trackable type widgets, called upon the tracker reaching its 
-	 * allowed travel boundary.
+	 * <p>
+	 * For button type control inputs, called upon pressing the button.
+	 * </p>
 	 * 
-	 * @param view       The widget instance broadcasting this event.
+	 * <p>
+	 * For switch type control inputs, called upon transitioning from
+	 * off to on state
+	 * </p>
+	 * 
+	 * <p>
+	 * For trackable type control inputs, called upon the tracker reaching its 
+	 * allowed travel boundary.
+	 * </p>
+	 * 
+	 * @param view       The control input instance broadcasting this event.
 	 */
 	public void onTrackerHitBoundary(View view);
 	
 	/**
-	 * For trackable type widgets, called upon the tracker moving away
+	 * <p>
+	 * For button type control inputs, called upon pressing the button.
+	 * </p>
+	 * 
+	 * <p>
+	 * For switch type control inputs, called upon transitioning from
+	 * off to on state
+	 * </p>
+	 * 
+	 * <p>
+	 * For trackable type control inputs, called upon the tracker moving away
 	 * from its allowed travel boundary.
+	 * </p>
 	 *  
-	 * @param view       The widget instance broadcasting this event.
+	 * @param view       The control input instance broadcasting this event.
 	 */
 	public void onTrackerLeaveBoundary(View view);
 }
