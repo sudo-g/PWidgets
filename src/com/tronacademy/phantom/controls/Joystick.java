@@ -84,6 +84,9 @@ public class Joystick extends View implements ControlInput {
 	}
 
 	/* -- ControlInput methods -- */
+	/**
+	 * Method currently unsupported for this control input type.
+	 */
 	@Override
 	public synchronized void setSubChanVal(int subchannel, byte value) throws 
 	UnsupportedOperationException{
@@ -201,7 +204,7 @@ public class Joystick extends View implements ControlInput {
 	
 	/**
 	 * Sets the appearance of the ControlInput based on its touchable state.
-	 * Override this method to implement custom skins.
+	 * Override this method to implement custom visual effects.
 	 * 
 	 * @param touchable   Flag indicating whether input is set to touchable.    
 	 */
