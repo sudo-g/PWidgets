@@ -1,5 +1,6 @@
 package com.tronacademy.phantom.fsm;
 
+
 /** 
  * <p>
  * Container for all attributes associated with 
@@ -12,19 +13,14 @@ package com.tronacademy.phantom.fsm;
  */
 public class FsmEvent {
 	public final String mName;
-	public final int mSpace;
 	public final int mId;
 	
 	/**
-	 * Creates a generic finite state machine event
-	 * 
 	 * @param name  String name for this event (debugging usage).
-	 * @param space ID of the event space this event belongs to.
 	 * @param id    Unique identifier within its event space.
 	 */
-	public FsmEvent(String name, int space, int id) {
+	public FsmEvent(String name, int id) {
 		mName = name;
-		mSpace = space;
 		mId = id;
 	}
 	
@@ -43,9 +39,12 @@ public class FsmEvent {
 	}
 	
 	/**
-	 * @return ID of the event space containing this event.
+	 * Finds whether this event is a member of an event space.
+	 * 
+	 * @param evSp Event space to query for membership
+	 * @return Flag representing whether event is a member.
 	 */
-	public int getSpaceId() {
-		return mSpace;
+	public boolean isMemberOf(EventSpace evSp) {
+		return evSp.hasEvent(this);
 	}
 }
