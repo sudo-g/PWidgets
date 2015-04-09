@@ -55,12 +55,6 @@ public abstract class FsmState {
 	// Mutable when FSM runs, access carefully
 	private FsmState mCurrentState = null;    
 	
-	// Error messages
-	private static final String stEvSpErrMsg = "Event space mismatch: '%s' state does not listen to same event space as '%s'.";
-	private static final String evEvSpErrMsg = "Event space mismatch: '%s' will not be able to listen to event [%s].";
-	private static final String sameEvSpErrMsg = "Internal states cannot listen to same event space as parent.";
-	private static final String stSpSizeExErMsg = "Internal state space size exceeded: Adding state '%s' failed, max size of '%s' is %d.";
-	
 	/**
 	 * @param name      String name for this state.
 	 * @param evSp      Handle to the event space this state listens to.
@@ -82,22 +76,20 @@ public abstract class FsmState {
 	 * 
 	 * @param state State to transition to.
 	 * @param event Event that will trigger the transition.
-	 * @throws IllegalArgumentException if event space mismatch.
+	 * @throws EventSpaceMismatchException if transition state or event has wrong event space.
 	 */
 	protected void bindEventToTransition(final FsmState state, final FsmEvent event) throws 
-	IllegalArgumentException {
+	EventSpaceMismatchException {
 		if (state.getListenEventSpace() == mListenEvSp) {
 			if (event.isMemberOf(mListenEvSp)) {	
 		 		mTransitionStates[event.getId()] = state;
 			} else {
-				String erMsg = String.format(evEvSpErrMsg, mName, event.getName());
 				// event not in event space this state listens to
-				throw new IllegalArgumentException(erMsg);
+				throw new EventSpaceMismatchException(this, state);
 			}
 		} else {
 			// new state does not listen to the same event space as this state
-			String erMsg = String.format(stEvSpErrMsg, state.getName(), mName);
-			throw new IllegalArgumentException(erMsg);
+			throw new EventSpaceMismatchException(this, state);
 		}
 	}
 	
@@ -105,11 +97,10 @@ public abstract class FsmState {
 	 * Add state to the internal FSM.
 	 * 
 	 * @param state State to add to internal FSM
-	 * @throws IllegalArgumentException if inserted state listens to same event space as parent.
-	 * @throws IndexOutOfBoundsException if inserting state exceeds state space size.
+	 * @throws EventSpaceConflictException if inserted state listens to same event space as parent.
 	 */
 	protected void addStateToInternalFsm(final FsmState state) throws 
-	IllegalArgumentException, IndexOutOfBoundsException {
+	EventSpaceConflictException {
 		
 		if (state.getListenEventSpace() != mListenEvSp) {
 			if (mInnerStateIndex < mInnerStates.length) {
@@ -119,12 +110,11 @@ public abstract class FsmState {
 				mCurrentState = mInnerStates[0];
 			} else {
 				// state space of internal FSM exceeded
-				String erMsg = String.format(stSpSizeExErMsg, state.getName(), mName, mInnerStates.length);
-				throw new IndexOutOfBoundsException(erMsg);
+				throw new IndexOutOfBoundsException();
 			}
 		} else {
 			// internal states cannot listen to same event space as parent
-			throw new IllegalArgumentException(sameEvSpErrMsg);
+			throw new EventSpaceConflictException(this, state);
 		}
 	}
 	
@@ -240,4 +230,32 @@ public abstract class FsmState {
 			}
 		}
 	}
+}
+
+class EventSpaceMismatchException extends Exception {
+
+	private static final long serialVersionUID = 7130913380099985139L;
+	
+	private static String st2stErr = "State '%s' cannot transition to state '%s' because they do not listen to the same event space";
+	private static String st2evErr = "State '%s' cannot listen to event [%s] because their event spaces do not match";
+
+	public EventSpaceMismatchException(final FsmState srcSt, final FsmState dstSt) {
+		super(String.format(st2stErr, srcSt.getName(), dstSt.getName()));
+	}
+	
+	public EventSpaceMismatchException(final FsmState srcSt, final FsmEvent transEv) {
+		super(String.format(st2evErr, srcSt.getName(), transEv.getName()));
+	}
+}
+
+class EventSpaceConflictException extends Exception {
+
+	private static final long serialVersionUID = -7574395290980140762L;
+	
+	private static String tmplt = "Internal state (%s) cannot listen to same event space as parent state (%s)";
+	
+	public EventSpaceConflictException(final FsmState srcSt, final FsmState intSt) {
+		super(String.format(tmplt, intSt, srcSt));
+	}
+	
 }
