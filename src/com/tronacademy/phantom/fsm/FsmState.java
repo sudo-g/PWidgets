@@ -47,9 +47,9 @@ package com.tronacademy.phantom.fsm;
 public abstract class FsmState {
 	// Not mutable after FSM runs
 	private String mName;
-	EventSpace mListenEvSp;   // not private, can be modified by FsmBuilder
+	EventSpace mListenEvSp;
 	private FsmState[] mTransitionStates;
-	private FsmState[] mInnerStates = null;
+	FsmState[] mInnerStates = null;
 	private int mInnerStateIndex = 0;
 	
 	// Mutable when FSM runs, access carefully
@@ -160,7 +160,6 @@ public abstract class FsmState {
 				if (newState != null) {
 					mCurrentState = newState;
 				}
-
 				
 				// if control is passed to a sub-state, no transition will occur
 				return null;
@@ -199,7 +198,8 @@ public abstract class FsmState {
 		return mCurrentState;
 	}
 	
-	private FsmState signalEventToInternalState(FsmEvent event, Object... context) {
+	
+	FsmState signalEventToInternalState(FsmEvent event, Object... context) {
 		if (hasInternalState()) {
 			// get a reference copy as mCurrentState can change
 			FsmState currentStateCache = mCurrentState;
@@ -213,7 +213,7 @@ public abstract class FsmState {
 		}
 	}
 	
-	private void performActionOfInternalState(Object... context) {
+	void performActionOfInternalState(Object... context) {
 		if (hasInternalState()) {
 			// get a reference copy as mCurrentState can change
 			FsmState currentStateCache = mCurrentState;
@@ -225,7 +225,7 @@ public abstract class FsmState {
 		}
 	}
 	
-	private boolean hasInternalState() {
+	boolean hasInternalState() {
 		return (mInnerStates.length > 0);
 	}
 	
