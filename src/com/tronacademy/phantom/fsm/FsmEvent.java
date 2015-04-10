@@ -1,6 +1,5 @@
 package com.tronacademy.phantom.fsm;
 
-
 /** 
  * <p>
  * Container for all attributes associated with 

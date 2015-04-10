@@ -1,6 +1,5 @@
 package com.tronacademy.phantom.fsm;
 
-
 /**
  * <p>
  * Framework for a finite state machine (FSM) with nesting functionality.
@@ -49,8 +48,7 @@ public abstract class FsmState {
 	private String mName;
 	EventSpace mListenEvSp;   // not private, can be modified by FsmBuilder
 	private FsmState[] mTransitionStates;
-	private FsmState[] mInnerStates = null;
-	private int mInnerStateIndex = 0;
+	private FsmState mInitInternalState = null;
 	
 	// Mutable when FSM runs, access carefully
 	private FsmState mCurrentState = null;    
@@ -60,16 +58,26 @@ public abstract class FsmState {
 	 * @param evSp      Handle to the event space this state listens to.
 	 * @param intSpSize Size of inner FSM.
 	 */
-	public FsmState(String name, final EventSpace evSp, int intSpSize) {
+	public FsmState(String name, final EventSpace evSp) {
 		mName = name;
 		mListenEvSp = evSp;
 		
 		// pre-allocate transition matrix based on event space size
 		mTransitionStates = new FsmState[evSp.getSize()];
-		
-		// pre-allocate array of internal states
-		mInnerStates = new FsmState[intSpSize];
 	}
+	
+	/**
+	 * <p>
+	 * Setup all state transitions by overriding this method.
+	 * </p>
+	 * 
+	 * <p>
+	 * DO NOT call this in the state's constructor.
+	 * Designed to be called by parent state.
+	 * </p>
+	 * 
+	 */
+	abstract protected void setupTransitions();
 	
 	/**
 	 * Bind a state transition to an event.
@@ -94,27 +102,20 @@ public abstract class FsmState {
 	}
 	
 	/**
-	 * Add state to the internal FSM.
+	 * Creates an internal FSM and setups the initial state of it.
 	 * 
-	 * @param state State to add to internal FSM
-	 * @throws EventSpaceConflictException if inserted state listens to same event space as parent.
+	 * @param entryState The entry point state of the internal FSM.
+	 * @throws EventSpaceConflictException if entry point state listens to same event space.
 	 */
-	protected void addStateToInternalFsm(final FsmState state) throws 
+	protected void configInternalFsm(final FsmState initState) throws 
 	EventSpaceConflictException {
 		
-		if (state.getListenEventSpace() != mListenEvSp) {
-			if (mInnerStateIndex < mInnerStates.length) {
-				mInnerStates[mInnerStateIndex++] = state;
-				
-				// entry inner state is the first added internal state
-				mCurrentState = mInnerStates[0];
-			} else {
-				// state space of internal FSM exceeded
-				throw new IndexOutOfBoundsException();
-			}
+		if (initState.getListenEventSpace() != mListenEvSp) {
+			mInitInternalState = initState;
+			mCurrentState = mInitInternalState;
 		} else {
 			// internal states cannot listen to same event space as parent
-			throw new EventSpaceConflictException(this, state);
+			throw new EventSpaceConflictException(this, initState);
 		}
 	}
 	
@@ -140,8 +141,8 @@ public abstract class FsmState {
 				if (newState != null) {
 					resetInternalState();
 				}
-				
 				return newState;
+				
 			} else {
 				// event space mismatch, evaluate internal state transition
 				
@@ -150,7 +151,6 @@ public abstract class FsmState {
 				if (newState != null) {
 					mCurrentState = newState;
 				}
-
 				
 				// if control is passed to a sub-state, no transition will occur
 				return null;
@@ -191,11 +191,11 @@ public abstract class FsmState {
 	
 	private FsmState signalEventToInternalState(FsmEvent event, Object... context) {
 		if (hasInternalState()) {
-			// get a reference copy as mCurrentState can change
+			// get a reference copy for thread safety mCurrentState
 			FsmState currentStateCache = mCurrentState;
 			
 			if (currentStateCache == null) {
-				currentStateCache = mInnerStates[0];
+				currentStateCache = mInitInternalState;
 			}
 			return currentStateCache.signalEvent(event, context);
 		} else {
@@ -205,57 +205,28 @@ public abstract class FsmState {
 	
 	private void performActionOfInternalState(Object... context) {
 		if (hasInternalState()) {
-			// get a reference copy as mCurrentState can change
+			// get a reference copy for thread safety of mCurrentState
 			FsmState currentStateCache = mCurrentState;
 			
 			if (currentStateCache == null) {
-				currentStateCache = mInnerStates[0];
+				currentStateCache = mInitInternalState;
 			}
 			currentStateCache.performAction(context);
 		}
 	}
 	
 	private boolean hasInternalState() {
-		return (mInnerStates.length > 0);
+		return (mInitInternalState != null);
 	}
 	
 	private void resetInternalState() {
 		if (hasInternalState()) {
-			// action of recursion is to reset internal state
-			mCurrentState = mInnerStates[0];
+			// get a reference copy for thread safety of mCurrentState
+			final FsmState currentStateCache = mCurrentState;
+			mCurrentState = mInitInternalState;
 			
-			// traverse internal states
-			for (FsmState state : mInnerStates) {
-				state.resetInternalState();
-			}
+			// tail recursion optimization my be used...
+			currentStateCache.resetInternalState();
 		}
 	}
-}
-
-class EventSpaceMismatchException extends Exception {
-
-	private static final long serialVersionUID = 7130913380099985139L;
-	
-	private static String st2stErr = "State '%s' cannot transition to state '%s' because they do not listen to the same event space";
-	private static String st2evErr = "State '%s' cannot listen to event [%s] because their event spaces do not match";
-
-	public EventSpaceMismatchException(final FsmState srcSt, final FsmState dstSt) {
-		super(String.format(st2stErr, srcSt.getName(), dstSt.getName()));
-	}
-	
-	public EventSpaceMismatchException(final FsmState srcSt, final FsmEvent transEv) {
-		super(String.format(st2evErr, srcSt.getName(), transEv.getName()));
-	}
-}
-
-class EventSpaceConflictException extends Exception {
-
-	private static final long serialVersionUID = -7574395290980140762L;
-	
-	private static String tmplt = "Internal state (%s) cannot listen to same event space as parent state (%s)";
-	
-	public EventSpaceConflictException(final FsmState srcSt, final FsmState intSt) {
-		super(String.format(tmplt, intSt, srcSt));
-	}
-	
 }
