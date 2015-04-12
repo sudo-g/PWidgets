@@ -11,6 +11,8 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import com.tronacademy.phantom.fsm.EventSpace;
+import com.tronacademy.phantom.fsm.EventSpaceConflictException;
+import com.tronacademy.phantom.fsm.EventSpaceMismatchException;
 import com.tronacademy.phantom.fsm.FsmEvent;
 import com.tronacademy.phantom.fsm.FsmState;
 import com.tronacademy.phantom.utils.ControlInput;
@@ -348,25 +350,33 @@ public class Joystick extends View implements ControlInput {
 			// Hosting state listens to 0 size event space 
 			// as it always delegates control to internal states,
 			// of which it has a non-zero internal state space.
-			super("Joystick", new EventSpace(0), JOYSTICK_EVSP_SIZE);
+			super("Joystick", new EventSpace(0));
 			
-			mIdleState.linkStates();
-			mInBoundaryState.linkStates();
-			mOnBoundaryState.linkStates();
+			mIdleState.setupTransitions();
+			mInBoundaryState.setupTransitions();
+			mOnBoundaryState.setupTransitions();
 			
-			addStateToInternalFsm(mIdleState);
-			addStateToInternalFsm(mInBoundaryState);
-			addStateToInternalFsm(mOnBoundaryState);
+			try {
+				configInternalFsm(mIdleState);
+			} catch (EventSpaceConflictException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		/* -- Worker states -- */
 		private class IdleState extends FsmState {
 			public IdleState() {
-				super("Idle", JOYSTICK_EVSP, 0);
+				super("Idle", JOYSTICK_EVSP);
 			}
 			
-			void linkStates() {
-				bindEventToTransition(mInBoundaryState, EVENT_GRIP);
+			protected void setupTransitions() {
+				try {
+					bindEventToTransition(mInBoundaryState, EVENT_GRIP);
+				} catch (EventSpaceMismatchException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			
 			public void performAction(Object... context) {
@@ -374,25 +384,26 @@ public class Joystick extends View implements ControlInput {
 				releaseTracker();
 			}
 			
-			public FsmState signalEvent(final FsmEvent event, Object... context) {
-				FsmState newState = super.signalEvent(event);
-				
-				if (mControlInputListener != null && newState == mInBoundaryState) {
-					mControlInputListener.onStartTracking(getRootView());
+			protected void entryAction(Object... context) {
+				if (mControlInputListener != null) {
+					mControlInputListener.onReleaseTracking(getRootView());
 				}
-				
-				return newState;
 			}
 		}
 		
 		private class InBoundaryState extends FsmState {
 			public InBoundaryState() {
-				super("In Boundary", JOYSTICK_EVSP, 0);
+				super("In Boundary", JOYSTICK_EVSP);
 			}
 			
-			void linkStates() {
-				bindEventToTransition(mIdleState, EVENT_RELEASE);
-				bindEventToTransition(mOnBoundaryState, EVENT_ONBOUNDARY);	
+			protected void setupTransitions() {
+				try {
+					bindEventToTransition(mIdleState, EVENT_RELEASE);
+					bindEventToTransition(mOnBoundaryState, EVENT_ONBOUNDARY);
+				} catch (EventSpaceMismatchException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}	
 			}
 			
 			public void performAction(Object... context) {
@@ -400,30 +411,26 @@ public class Joystick extends View implements ControlInput {
 				inBoundaryTrack((MotionEvent) context[0]);
 			}
 			
-			public FsmState signalEvent(final FsmEvent event, Object... context) {
-				FsmState newState = super.signalEvent(event);
-				
+			protected void entryAction(Object... context) {
 				if (mControlInputListener != null) {
-					if (newState == mOnBoundaryState) {
-						mControlInputListener.onTrackerHitBoundary(getRootView());
-	
-					} else if (newState == mIdleState) {
-						mControlInputListener.onReleaseTracking(getRootView());
-					}
+					mControlInputListener.onStartTracking(getRootView());
 				}
-				
-				return newState;
 			}
 		}
 		
 		private class OnBoundaryState extends FsmState {
 			public OnBoundaryState() {
-				super("On Boundary", JOYSTICK_EVSP, 0);
+				super("On Boundary", JOYSTICK_EVSP);
 			}
 			
-			void linkStates() {
-				bindEventToTransition(mIdleState, EVENT_RELEASE);
-				bindEventToTransition(mInBoundaryState, EVENT_INBOUNDARY);
+			protected void setupTransitions() {
+				try {
+					bindEventToTransition(mIdleState, EVENT_RELEASE);
+					bindEventToTransition(mInBoundaryState, EVENT_INBOUNDARY);
+				} catch (EventSpaceMismatchException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			
 			public void performAction(Object... context) {
@@ -431,14 +438,22 @@ public class Joystick extends View implements ControlInput {
 				onBoundaryTrack((MotionEvent) context[0]);
 			}
 			
+			protected void entryAction(Object... context) {
+				if (mControlInputListener != null) {
+					mControlInputListener.onTrackerHitBoundary(getRootView());
+				}
+			}
+			
+			protected void exitAction(Object... context) {
+				if (mControlInputListener != null) {
+					mControlInputListener.onTrackerLeaveBoundary(getRootView());
+				}
+			}
+			
 			public FsmState signalEvent(final FsmEvent event, Object... context) {
 				FsmState newState = super.signalEvent(event);
 				
-				if (mControlInputListener != null) {
-					if (newState != null) {
-						mControlInputListener.onTrackerLeaveBoundary(getRootView());
-					}
-					
+				if (mControlInputListener != null) { 
 					if (newState == mIdleState) {
 						mControlInputListener.onReleaseTracking(getRootView());
 					}

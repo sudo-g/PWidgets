@@ -67,19 +67,6 @@ public abstract class FsmState {
 	}
 	
 	/**
-	 * <p>
-	 * Setup all state transitions by overriding this method.
-	 * </p>
-	 * 
-	 * <p>
-	 * DO NOT call this in the state's constructor.
-	 * Designed to be called by parent state.
-	 * </p>
-	 * 
-	 */
-	abstract protected void setupTransitions();
-	
-	/**
 	 * Bind a state transition to an event.
 	 * 
 	 * @param state State to transition to.
@@ -99,6 +86,24 @@ public abstract class FsmState {
 			// new state does not listen to the same event space as this state
 			throw new EventSpaceMismatchException(this, state);
 		}
+	}
+	
+	/**
+	 * Entry hook, override to add action.
+	 * 
+	 * @param context Mealy machine input. 
+	 */
+	protected void entryAction(Object... context) {
+		
+	}
+	
+	/**
+	 * Exit hook, override to add action.
+	 * 
+	 * @param context Mealy machine input.
+	 */
+	protected void exitAction(Object... context) {
+		
 	}
 	
 	/**
@@ -122,7 +127,8 @@ public abstract class FsmState {
 	/**
 	 * Evaluates the state to transition to based on event.
 	 * 
-	 * @param event Event that occurred.
+	 * @param event   Event that occurred.
+	 * @param context Mealy machine input.
 	 * @return State to transition to or null if no transition.
 	 */
 	public FsmState signalEvent(final FsmEvent event, Object... context) {
@@ -131,29 +137,34 @@ public abstract class FsmState {
 			return null;
 		}
 		else {
-			if (event.isMemberOf(mListenEvSp)) {
-				// event space match, evaluate transition
+			// atomic section for run to completion
+			synchronized (this) {
+				if (event.isMemberOf(mListenEvSp)) {
+					// event space match, evaluate transition
+	
+					// find the new state to transition to
+					final FsmState newState = mTransitionStates[event.getId()];
+					
+					// if transition is to occur
+					if (newState != null) {
+						exitAction(context);           // perform exit action of this state
+						resetInternalState();          // reset internal state from this hierarchy onwards
+						newState.entryAction(context); // perform entry action of new state
+					}
+					return newState;
+					
+				} else {
+					// event space mismatch, evaluate internal state transition
 
-				// find the new state to transition to
-				final FsmState newState = mTransitionStates[event.getId()];
-				
-				// if transition is to occur, erase internal states from this hierarchy onwards
-				if (newState != null) {
-					resetInternalState();
+					// signal event to sub-state if it exists
+					final FsmState newState = signalEventToInternalState(event, context);
+					if (newState != null) {
+						mCurrentState = newState;
+					}
+					
+					// if control is passed to a sub-state, no transition will occur
+					return null;	
 				}
-				return newState;
-				
-			} else {
-				// event space mismatch, evaluate internal state transition
-				
-				// signal event to sub-state if it exists
-				final FsmState newState = signalEventToInternalState(event, context);
-				if (newState != null) {
-					mCurrentState = newState;
-				}
-				
-				// if control is passed to a sub-state, no transition will occur
-				return null;
 			}
 		}
 	}
@@ -161,7 +172,7 @@ public abstract class FsmState {
 	/**
 	 * Perform the action of this state
 	 * 
-	 * @param context  Information for the state action.
+	 * @param context Mealy machine input.
 	 */
 	public void performAction(Object... context) {
 		// perform action of child state if it exists
@@ -208,13 +219,11 @@ public abstract class FsmState {
 	 */
 	FsmState signalEventToInternalState(FsmEvent event, Object... context) {
 		if (hasInternalState()) {
-			// get a reference copy for thread safety mCurrentState
-			FsmState currentStateCache = mCurrentState;
-			
-			if (currentStateCache == null) {
-				currentStateCache = mInitInternalState;
+			// called in atomic section, already thread safe
+			if (mCurrentState == null) {
+				mCurrentState = mInitInternalState;
 			}
-			return currentStateCache.signalEvent(event, context);
+			return mCurrentState.signalEvent(event, context);
 		} else {
 			return null;
 		}
@@ -243,12 +252,9 @@ public abstract class FsmState {
 	 */
 	void resetInternalState() {
 		if (hasInternalState()) {
-			// get a reference copy for thread safety of mCurrentState
-			final FsmState currentStateCache = mCurrentState;
-			mCurrentState = mInitInternalState;
-			
-			// tail recursion optimization my be used...
-			currentStateCache.resetInternalState();
+			// called in atomic section, already thread safe.
+			mCurrentState.resetInternalState();
 		}
+		mCurrentState = mInitInternalState;
 	}
 }
