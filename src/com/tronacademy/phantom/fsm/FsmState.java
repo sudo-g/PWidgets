@@ -46,7 +46,7 @@ package com.tronacademy.phantom.fsm;
 public abstract class FsmState {
 	// Not mutable after FSM runs
 	private String mName;
-	EventSpace mListenEvSp;   // not private, can be modified by FsmBuilder
+	EventSpace mListenEvSp;
 	private FsmState[] mTransitionStates;
 	private FsmState mInitInternalState = null;
 	
@@ -189,7 +189,24 @@ public abstract class FsmState {
 		return mCurrentState;
 	}
 	
-	private FsmState signalEventToInternalState(FsmEvent event, Object... context) {
+	/** 
+	 * Tests whether an internal FSM exists in this state. 
+	 * 
+	 * @return Flag indicating whether an internal FSM exists. 
+	 */
+	protected boolean hasInternalState() {
+		return (mInitInternalState != null);
+	}
+	
+	/**
+	 * Signal event to the current internal state.
+	 * A null checking and thread safe wrapper for signalEvent().
+	 * 
+	 * @param event   Event to signal.
+	 * @param context Mealy machine input.
+	 * @return The state to transition to.
+	 */
+	FsmState signalEventToInternalState(FsmEvent event, Object... context) {
 		if (hasInternalState()) {
 			// get a reference copy for thread safety mCurrentState
 			FsmState currentStateCache = mCurrentState;
@@ -203,7 +220,13 @@ public abstract class FsmState {
 		}
 	}
 	
-	private void performActionOfInternalState(Object... context) {
+	/**
+	 * Execute the internal state action.
+	 * A null checking and thread safe wrapper for performAction().
+	 * 
+	 * @param context Mealy machine input.
+	 */
+	void performActionOfInternalState(Object... context) {
 		if (hasInternalState()) {
 			// get a reference copy for thread safety of mCurrentState
 			FsmState currentStateCache = mCurrentState;
@@ -215,11 +238,10 @@ public abstract class FsmState {
 		}
 	}
 	
-	private boolean hasInternalState() {
-		return (mInitInternalState != null);
-	}
-	
-	private void resetInternalState() {
+	/**
+	 * Set all internal states from this hierarchy onwards, to their initial state.
+	 */
+	void resetInternalState() {
 		if (hasInternalState()) {
 			// get a reference copy for thread safety of mCurrentState
 			final FsmState currentStateCache = mCurrentState;
