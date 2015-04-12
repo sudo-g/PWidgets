@@ -189,7 +189,23 @@ public abstract class FsmState {
 		return mCurrentState;
 	}
 	
+	/** 
+	 * Tests whether an internal FSM exists in this state. 
+	 * 
+	 * @return Flag indicating whether an internal FSM exists. 
+	 */
+	protected boolean hasInternalState() {
+		return (mInitInternalState != null);
+	}
 	
+	/**
+	 * Signal event to the current internal state.
+	 * A null checking and thread safe wrapper for signalEvent().
+	 * 
+	 * @param event   Event to signal.
+	 * @param context Mealy machine input.
+	 * @return The state to transition to.
+	 */
 	FsmState signalEventToInternalState(FsmEvent event, Object... context) {
 		if (hasInternalState()) {
 			// get a reference copy for thread safety mCurrentState
@@ -204,6 +220,12 @@ public abstract class FsmState {
 		}
 	}
 	
+	/**
+	 * Execute the internal state action.
+	 * A null checking and thread safe wrapper for performAction().
+	 * 
+	 * @param context Mealy machine input.
+	 */
 	void performActionOfInternalState(Object... context) {
 		if (hasInternalState()) {
 			// get a reference copy for thread safety of mCurrentState
@@ -216,11 +238,10 @@ public abstract class FsmState {
 		}
 	}
 	
-	private boolean hasInternalState() {
-		return (mInitInternalState != null);
-	}
-	
-	private void resetInternalState() {
+	/**
+	 * Set all internal states from this hierarchy onwards, to their initial state.
+	 */
+	void resetInternalState() {
 		if (hasInternalState()) {
 			// get a reference copy for thread safety of mCurrentState
 			final FsmState currentStateCache = mCurrentState;
