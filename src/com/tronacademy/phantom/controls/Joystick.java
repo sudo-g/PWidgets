@@ -124,11 +124,6 @@ public class Joystick extends View implements ControlInput {
 		indicateTouchable(touchable);
 	}
 	
-	@Override
-	public void configure() {
-		// TODO:
-	}
-	
 	/* -- Sizing methods -- */
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 		// get the co-ordinates of the center of the View
