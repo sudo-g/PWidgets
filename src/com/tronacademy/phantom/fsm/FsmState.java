@@ -24,19 +24,21 @@ package com.tronacademy.phantom.fsm;
  * </p>
  * 
  * <p>
- * Add event hooks by overriding the {@code evaluateTransition()} method.
- * Ensure that the return value of the {@code super} method is still 
- * returned so transition can still occur. A transition hook is 
- * selectively executing actions based on incoming event or the state 
- * being transitioned on the overridden method.
+ * Add state entry and exit event hooks by overriding the 
+ * {@code entryAction()} and {@code exitAction()} methods respectively.
+ * Overriding {@code evaluateTransition()} can also achieve the same
+ * result but is discouraged unless implementing a custom event hook
+ * absolutely requires it. When overriding {@code evaluateTransition()},
+ * ensure the value of the {@code super} method is returned so transition
+ * can still occur.
  * </p>
  * 
  * <p>
  * All states in the same FSM (an internal FSM is considered a separate 
  * FSM hosted inside one of the states) must listen to same event space.
- * Internal states cannot listen to same event space as its parent. 
- * That way, when an event is evaluated for transition, the state knows 
- * when to delegate the evaluation to a internal state.
+ * Internal states cannot be set to listen to same event space as its 
+ * parent. That way, when an event is evaluated for transition, the 
+ * state knows when to delegate the evaluation to a internal state.
  * </p>
  * 
  * @author George Xian
