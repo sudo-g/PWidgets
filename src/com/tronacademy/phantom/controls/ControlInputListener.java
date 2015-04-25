@@ -1,14 +1,11 @@
-package com.tronacademy.phantom.utils;
+package com.tronacademy.phantom.controls;
 
 import android.view.View;
 
 /**
  * <p>
- * PWidgetListener.java
- * </p>
- * 
- * <p>
  * Callbacks for events on ControlInputs.
+ * Note that not all control inputs implement all of these.
  * </p>
  * 
  * @author George Xian

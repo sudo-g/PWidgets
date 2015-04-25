@@ -1,19 +1,17 @@
-package com.tronacademy.phantom.utils;
+package com.tronacademy.phantom.controls;
 
 /**
  * <p>
- * PWidget.java
- * </p>
- * 
- * <p>
  * Methods common to all Phantom ControlInputs.
- * By having these methods as interfaces, 
- * the widgets can still inherit View types.
+ * By having these methods as interfaces, the widgets can 
+ * still inherit View types.
  * </p>
  * 
  * <p>
- * All ControlInputs have a number of sub-channels can be bound to 
- * input channels of a Mixer.
+ * All ControlInputs have a number of sub-channels.
+ * Create a {@code ControlInputListener} and override the
+ * {@code onSubChanValChanged()} to specify what these 
+ * sub-channels affect.  
  * </p>
  * 
  * @author George Xian
@@ -58,10 +56,4 @@ public interface ControlInput {
 	 * @param touchable  Set true to enable touch or false to disable
 	 */
 	public void setTouchable(boolean touchable);
-	
-	/**
-	 * Opens an interface to change settings of this ControlInput instance.
-	 */
-	public void configure();
-
 }
