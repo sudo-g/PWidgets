@@ -15,8 +15,8 @@ import com.tronacademy.phantom.fsm.EventSpaceConflictException;
 import com.tronacademy.phantom.fsm.EventSpaceMismatchException;
 import com.tronacademy.phantom.fsm.FsmEvent;
 import com.tronacademy.phantom.fsm.FsmState;
-import com.tronacademy.phantom.utils.ControlInput;
-import com.tronacademy.phantom.utils.ControlInputListener;
+import com.tronacademy.phantom.controls.ControlInput;
+import com.tronacademy.phantom.controls.ControlInputListener;
 import com.tronacademy.phantom.controls.R;
 
 /**
