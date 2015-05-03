@@ -30,8 +30,6 @@ import com.tronacademy.phantom.controls.R;
  */
 public class Joystick extends View implements ControlInput {
 	
-	private static final String TAG = "Phantom::Joystick";
-	
 	/* -- Static properties of this ControlInput type -- */
 	// Joysticks are 2D control inputs
 	private static final int NUM_OF_SUBCHANS = 2;
@@ -45,7 +43,7 @@ public class Joystick extends View implements ControlInput {
 	protected static final FsmEvent EVENT_ONBOUNDARY = JOYSTICK_EVSP.newEvent("On Boundary");
 	
 	/* -- Fields -- */
-	public String mName = "Joystick";
+	private String mName = "Joystick";
 	protected ControlInputListener mControlInputListener;
 	private boolean mEnabled = true;
 	
@@ -86,6 +84,11 @@ public class Joystick extends View implements ControlInput {
 	}
 
 	/* -- ControlInput methods -- */
+	@Override
+	public String getName() {
+		return mName;
+	}
+	
 	/**
 	 * Method currently unsupported for this control input type.
 	 */

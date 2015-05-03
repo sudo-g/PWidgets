@@ -21,6 +21,11 @@ package com.tronacademy.phantom.controls;
 public interface ControlInput {
 	
 	/**
+	 * @return The string name of this ControlInput instance.
+	 */
+	public String getName();
+	
+	/**
 	 * Sets a sub-channel to a particular value.
 	 * 
 	 * @param subchannel The sub-channel whose value is to be altered.
