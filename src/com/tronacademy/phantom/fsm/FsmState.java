@@ -133,40 +133,38 @@ public abstract class FsmState {
 	 * @param context Mealy machine input.
 	 * @return State to transition to or null if no transition.
 	 */
-	public FsmState signalEvent(final FsmEvent event, Object... context) {
+	public synchronized FsmState signalEvent(final FsmEvent event, Object... context) {
 		if (event == null) {
 			// no meaningful event occurred, so no transition
 			return null;
 		}
 		else {
 			// atomic section for run to completion
-			synchronized (this) {
-				if (event.isMemberOf(mListenEvSp)) {
-					// event space match, evaluate transition
-	
-					// find the new state to transition to
-					final FsmState newState = mTransitionStates[event.getId()];
-					
-					// if transition is to occur
-					if (newState != null) {
-						exitAction(context);           // perform exit action of this state
-						resetInternalState();          // reset internal state from this hierarchy onwards
-						newState.entryAction(context); // perform entry action of new state
-					}
-					return newState;
-					
-				} else {
-					// event space mismatch, evaluate internal state transition
+			if (event.isMemberOf(mListenEvSp)) {
+				// event space match, evaluate transition
 
-					// signal event to sub-state if it exists
-					final FsmState newState = signalEventToInternalState(event, context);
-					if (newState != null) {
-						mCurrentState = newState;
-					}
-					
-					// if control is passed to a sub-state, no transition will occur
-					return null;	
+				// find the new state to transition to
+				final FsmState newState = mTransitionStates[event.getId()];
+				
+				// if transition is to occur
+				if (newState != null) {
+					exitAction(context);           // perform exit action of this state
+					resetInternalState();          // reset internal state from this hierarchy onwards
+					newState.entryAction(context); // perform entry action of new state
 				}
+				return newState;
+				
+			} else {
+				// event space mismatch, evaluate internal state transition
+
+				// signal event to sub-state if it exists
+				final FsmState newState = signalEventToInternalState(event, context);
+				if (newState != null) {
+					mCurrentState = newState;
+				}
+				
+				// if control is passed to a sub-state, no transition will occur
+				return null;	
 			}
 		}
 	}
