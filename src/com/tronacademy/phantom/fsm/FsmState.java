@@ -47,9 +47,9 @@ package com.tronacademy.phantom.fsm;
  */
 public abstract class FsmState {
 	// Not mutable after FSM runs
-	private String mName;
-	EventSpace mListenEvSp;
-	private FsmState[] mTransitionStates;
+	private final String mName;
+	final EventSpace mListenEvSp;    // not private, accessible by future builder class
+	private final FsmState[] mTransitionStates;
 	private FsmState mInitInternalState = null;
 	
 	// Mutable when FSM runs, access carefully

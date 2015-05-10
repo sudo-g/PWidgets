@@ -74,12 +74,14 @@ public class Joystick extends View implements ControlInput {
 	private boolean mIsProcessing = false;
 	private int mTrkrPosXCache;
 	private int mTrkrPosYCache;
-	protected JoystickFsm mJoystickFsm = new JoystickFsm();	
+	protected JoystickFsm mJoystickFsm;
 	
 
 	/* -- Constructors -- */
-	public Joystick(Context context, AttributeSet attrs) {
+	public Joystick(Context context, AttributeSet attrs) throws EventSpaceConflictException {
 		super(context, attrs);
+		
+		mJoystickFsm = new JoystickFsm();
 		loadGraphics();
 	}
 
@@ -344,7 +346,7 @@ public class Joystick extends View implements ControlInput {
 		private InBoundaryState mInBoundaryState = new InBoundaryState();
 		private OnBoundaryState mOnBoundaryState = new OnBoundaryState();
 		
-		public JoystickFsm() {
+		public JoystickFsm() throws EventSpaceConflictException {
 			// Hosting state listens to 0 size event space 
 			// as it always delegates control to internal states,
 			// of which it has a non-zero internal state space.
@@ -354,12 +356,7 @@ public class Joystick extends View implements ControlInput {
 			mInBoundaryState.setupTransitions();
 			mOnBoundaryState.setupTransitions();
 			
-			try {
-				configInternalFsm(mIdleState);
-			} catch (EventSpaceConflictException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			configInternalFsm(mIdleState);
 		}
 		
 		/* -- Worker states -- */

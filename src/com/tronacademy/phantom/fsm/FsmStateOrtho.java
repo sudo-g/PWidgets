@@ -27,7 +27,7 @@ import java.util.List;
  */
 public abstract class FsmStateOrtho extends FsmState {
 	
-	private List<FsmState> mOrthoInternalFsms;
+	private final List<FsmState> mOrthoInternalFsms;
 	
 	private static final String wrongFsmAddErrMsg = 
 			"configInternalFsm() not supported in FsmStateOrtho, please use addParallelFsm().";
